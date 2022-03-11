@@ -75,55 +75,29 @@ class BERT_CRF(BertPreTrainedModel):
             tokenize_loss = self.crf.neg_log_likelihood_loss(crf_logits, attention_mask, tokenize_labels)
             tokenize_predict = self.crf.decode(crf_logits, attention_mask)
 
-            # def segment_entity_logits_by_tokenize0():
-            #     tokenize_np = tokenize_labels.numpy() if type == 'Train' else tokenize_predict.numpy()
-            #     batch_size = entity_logits.size(0)
-            #     seq_len = entity_logits.size(1)
-            #     for i in range(batch_size):
-            #         start_index = -1
-            #         end_index = -1
-            #         for j in range(seq_len):
-            #             if tokenize_np[i][j] == 1:
-            #                 if start_index != -1 and end_index != -1:
-            #                     entity_logits[i, start_index:end_index, :] = torch.sum(entity_logits[i, start_index:end_index, :], dim=0,
-            #                                                                     keepdim=True).repeat(end_index - start_index, 1)
-            #                 start_index = j
-            #                 end_index = j + 1
-            #             elif tokenize_np[i][j] == 2:
-            #                 end_index = j + 1
-            #             else:
-            #                 if start_index != -1 and end_index != -1:
-            #                     entity_logits[i, start_index:end_index, :] = torch.sum(entity_logits[i, start_index:end_index, :], dim=0,
-            #                                                                            keepdim=True).repeat(end_index - start_index, 1)
-            #                 start_index = -1
-            #                 end_index = -1
-            #
-            #             if j == seq_len - 1 and tokenize_np[i][j] == 2:
-            #                 if start_index != -1 and end_index != -1:
-            #                     entity_logits[i, start_index:end_index, :] = torch.sum(entity_logits[i, start_index:end_index, :], dim=0,
-            #                                                                     keepdim=True).repeat(end_index - start_index, 1)
 
-            # tokenize_clone = tokenize_labels.clone() if type == 'Train' else tokenize_predict.clone()
-            # batch_size = tokenize_labels.size(0)
-            # seq_len = tokenize_labels.size(1)
-            # segment_entity_logits_list = []
-            # for i in range(batch_size):
-            #     acc_index = 0
-            #     tokenize_clone[i][0] = 0
-            #     for j in range(1, seq_len):
-            #         if tokenize_clone[i][j] != 2:
-            #             acc_index += 1
-            #         tokenize_clone[i][j] = acc_index
-            #
-            #     segment_entity_logits_list.append(torch.zeros(entity_logits.shape[1:]).
-            #                                       index_add_(0, tokenize_clone[i], entity_logits[i]))
-            #
-            # segment_entity_logits = torch.concat(segment_entity_logits_list, dim=0).view(batch_size, seq_len, -1)
-            # entity_logits = torch.gather(segment_entity_logits, 1,
-            #                              tokenize_clone.view(batch_size, seq_len, 1).expand(
-            #                                  batch_size,
-            #                                  seq_len,
-            #                                  self.entity_labels_num))
+            tokenize_clone = tokenize_labels.clone() if type == 'Train' else tokenize_predict.clone()
+            tokenize_clone = tokenize_clone.numpy()
+            batch_size = tokenize_labels.size(0)
+            seq_len = tokenize_labels.size(1)
+            segment_entity_logits_list = []
+            for i in range(batch_size):
+                acc_index = 0
+                tokenize_clone[i][0] = 0
+                for j in range(1, seq_len):
+                    if tokenize_clone[i][j] != 2:
+                        acc_index += 1
+                    tokenize_clone[i][j] = acc_index
+
+                segment_entity_logits_list.append(torch.zeros(entity_logits.shape[1:]).
+                                                  index_add_(0, torch.tensor(tokenize_clone[i]), entity_logits[i]))
+
+            segment_entity_logits = torch.concat(segment_entity_logits_list, dim=0).view(batch_size, seq_len, -1)
+            entity_logits = torch.gather(segment_entity_logits, 1,
+                                         torch.tensor(tokenize_clone).view(batch_size, seq_len, 1).expand(
+                                             batch_size,
+                                             seq_len,
+                                             self.entity_labels_num))
 
 
             entity_loss = self.criterion(entity_logits.view(-1, self.entity_labels_num),
