@@ -70,16 +70,16 @@ class BERT_CRF(BertPreTrainedModel):
         crf_logits = self.crf_classifier(sequence_output)
 
 
-
         if tokenize_labels is not None and entity_labels  is not None:
+
+
             tokenize_loss = self.crf.neg_log_likelihood_loss(crf_logits, attention_mask, tokenize_labels)
             tokenize_predict = self.crf.decode(crf_logits, attention_mask)
 
 
-            tokenize_clone = tokenize_labels.clone() if type == 'Train' else tokenize_predict.clone()
-            tokenize_clone = tokenize_clone.numpy()
-            batch_size = tokenize_labels.size(0)
-            seq_len = tokenize_labels.size(1)
+            tokenize_clone = tokenize_labels.clone().detach() if type == 'Train' else tokenize_predict.clone().detach()
+            batch_size = entity_logits.size(0)
+            seq_len = entity_logits.size(1)
             segment_entity_logits_list = []
             for i in range(batch_size):
                 acc_index = 0
@@ -89,15 +89,16 @@ class BERT_CRF(BertPreTrainedModel):
                         acc_index += 1
                     tokenize_clone[i][j] = acc_index
 
-                segment_entity_logits_list.append(torch.zeros(entity_logits.shape[1:]).
-                                                  index_add_(0, torch.tensor(tokenize_clone[i]), entity_logits[i]))
+                tmp_segment_entity_logits = torch.zeros(entity_logits.shape[1:]).index_add_(0, tokenize_clone[i].clone(), entity_logits[i])
+                segment_entity_logits_list.append(tmp_segment_entity_logits)
 
             segment_entity_logits = torch.concat(segment_entity_logits_list, dim=0).view(batch_size, seq_len, -1)
             entity_logits = torch.gather(segment_entity_logits, 1,
-                                         torch.tensor(tokenize_clone).view(batch_size, seq_len, 1).expand(
-                                             batch_size,
-                                             seq_len,
-                                             self.entity_labels_num))
+                                tokenize_clone.view(batch_size, seq_len, 1).expand(
+                                    batch_size,
+                                    seq_len,
+                                    self.entity_labels_num))
+
 
 
             entity_loss = self.criterion(entity_logits.view(-1, self.entity_labels_num),

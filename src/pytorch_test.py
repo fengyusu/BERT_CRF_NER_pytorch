@@ -86,3 +86,5 @@ seq_len = pred.size(1)
 # print(partition)
 
 
+print(torch.__version__)
+
