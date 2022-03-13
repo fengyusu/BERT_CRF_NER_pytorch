@@ -12,17 +12,16 @@ def log_sum_exp(vec, m_size):
 
 
 class CRF(nn.Module):
-    def __init__(self, tagset_size, gpu=False):
+    def __init__(self, tagset_size, device):
         super(CRF, self).__init__()
-        self.gpu = gpu
+        self.device = device
         self.average_batch = False
         self.tagset_size = tagset_size
-        init_transitions = torch.zeros(self.tagset_size + 2, self.tagset_size + 2)
-        if self.gpu:
-            init_transitions = init_transitions.cuda()
+        init_transitions = torch.zeros(self.tagset_size + 2, self.tagset_size + 2).to(self.device)
+
         self.transitions = nn.Parameter(init_transitions)
-        # self.transitions.data[:, -2] = -10000
-        # self.transitions.data[-1, :] = -10000
+        self.transitions.data[:, -2] = -10000
+        self.transitions.data[-1, :] = -10000
 
     def calculate_PZ(self, feats, mask):
         batch_size = feats.size(0)
@@ -90,9 +89,7 @@ class CRF(nn.Module):
         last_values = last_partition.expand(batch_size, tag_size, tag_size) + self.transitions.\
             view(1, tag_size, tag_size).expand(batch_size, tag_size, tag_size)
         _, last_bp = torch.max(last_values, 1)
-        pad_zero = torch.zeros(batch_size, tag_size).long()
-        if self.gpu:
-            pad_zero = pad_zero.cuda()
+        pad_zero = torch.zeros(batch_size, tag_size).long().to(self.device)
         back_points.append(pad_zero)
         back_points = torch.cat(back_points).view(seq_len, batch_size, tag_size)
 
@@ -101,9 +98,7 @@ class CRF(nn.Module):
         back_points = back_points.transpose(1, 0).contiguous()
         back_points.scatter_(1, last_position, insert_last)
         back_points = back_points.transpose(1, 0).contiguous()
-        decode_idx = torch.zeros(seq_len, batch_size)
-        if self.gpu:
-            decode_idx = decode_idx.cuda()
+        decode_idx = torch.zeros(seq_len, batch_size).to(self.device)
         decode_idx[-1] = pointer.data
         for idx in range(len(back_points) - 2, -1, -1):
             pointer = torch.gather(back_points[idx], 1, pointer.contiguous().view(batch_size, 1))
@@ -120,9 +115,7 @@ class CRF(nn.Module):
         batch_size = scores.size(1)
         seq_len = scores.size(0)
         tag_size = scores.size(2)
-        new_tags = torch.zeros(batch_size, seq_len)
-        if self.gpu:
-            new_tags = new_tags.cuda()
+        new_tags = torch.zeros(batch_size, seq_len).to(self.device)
         for idx in range(seq_len):
             if idx == 0:
                 new_tags[:, 0] = (tag_size - 2) * tag_size + tags[:, 0]

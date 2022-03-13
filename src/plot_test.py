@@ -9,21 +9,20 @@ import plotly.express as px
 import time
 
 def display(train_loss, evaluate_scores):
-    # print(np.arange(len(train_loss)))
-    # print(np.array(train_loss))
-    # print(np.arange(len(evaluate_scores)))
-    # print(np.array(evaluate_scores))
+
     train_loss_trace = go.Scatter(
         x = np.arange(len(train_loss)),
         y = np.array(train_loss),
-        mode = 'lines + markers',
-        name = 'line + marker'
+        mode = 'lines + markers + text',
+        name = 'train_loss',
+        text = np.array(train_loss),
+        textposition = "top center"
     )
     evaluate_loss_trace = go.Scatter(
         x = np.arange(len(evaluate_scores)),
         y = np.array(evaluate_scores),
         mode = 'lines + markers',
-        name = 'line + marker'
+        name = 'evaluate_scores'
     )
 
     loss_data = [train_loss_trace, evaluate_loss_trace]
@@ -32,30 +31,33 @@ def display(train_loss, evaluate_scores):
     loss_fig = dict(data=loss_data, layout=loss_layout)
     py.iplot(loss_fig, filename='loss-line')
 
-display_df = pd.DataFrame(columns=['step', 'train_loss', 'evaluate_scores'])
-
-for i in range(10):
-
-    display_df.loc[i] = [i, i+1, 3]
-    # print(display_df)
-    # display(train_loss, evaluate_scores)
-
-    # print("sleep 1 s")
-    # time.sleep(1)
-print(display_df)
-fig = px.scatter(display_df,
-             y="train_loss",
-             x="step",
-             animation_frame="step"
-        )
-fig.update_layout(width=1000,
-                  height=800,
-                  xaxis_showgrid=False,
-                  yaxis_showgrid=False,
-                  paper_bgcolor='rgba(0,0,0,0)',
-                  plot_bgcolor='rgba(0,0,0,0)',
-                  title_text='Evolution of Natural Disasters',
-                  showlegend=False)
-fig.update_xaxes(title_text='Number of Deaths')
-fig.update_yaxes(title_text='')
-fig.show()
+train_loss = [1,2,3,4,5]
+display(train_loss, train_loss)
+#
+# display_df = pd.DataFrame(columns=['step', 'train_loss', 'evaluate_scores'])
+#
+# for i in range(10):
+#
+#     display_df.loc[i] = [i, i+1, 3]
+#     # print(display_df)
+#     # display(train_loss, evaluate_scores)
+#
+#     # print("sleep 1 s")
+#     # time.sleep(1)
+# print(display_df)
+# fig = px.scatter(display_df,
+#              y="train_loss",
+#              x="step",
+#              animation_frame="step"
+#         )
+# fig.update_layout(width=1000,
+#                   height=800,
+#                   xaxis_showgrid=False,
+#                   yaxis_showgrid=False,
+#                   paper_bgcolor='rgba(0,0,0,0)',
+#                   plot_bgcolor='rgba(0,0,0,0)',
+#                   title_text='Evolution of Natural Disasters',
+#                   showlegend=False)
+# fig.update_xaxes(title_text='Number of Deaths')
+# fig.update_yaxes(title_text='')
+# fig.show()

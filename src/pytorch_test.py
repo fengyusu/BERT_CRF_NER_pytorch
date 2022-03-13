@@ -5,25 +5,25 @@ import torch.nn as nn
 import numpy as np
 import pandas as pd
 
-# resolved_archive_file = "../user_data/pretrain_model/bert-base-chinese/pytorch_model.bin"
-# resolved_archive_file = "../user_data/output_model/crf/pytorch_model.bin"
-# state_dict = torch.load(resolved_archive_file,map_location="cpu")
-# print("Models state_dict:")
-# for param_tensor in state_dict:
-#     print(param_tensor, "\t", state_dict[param_tensor].size())
-#     if "transitions" in param_tensor:
-#         print(param_tensor, "\t", state_dict[param_tensor])
+resolved_archive_file = "../user_data/pretrain_model/bert-base-chinese/pytorch_model.bin"
+resolved_archive_file = "../user_data/output_model/crf/pytorch_model.bin"
+state_dict = torch.load(resolved_archive_file,map_location="cpu")
+print("Models state_dict:")
+for param_tensor in state_dict:
+    print(param_tensor, "\t", state_dict[param_tensor].size())
+    if "transitions" in param_tensor:
+        print(param_tensor, "\t", state_dict[param_tensor])
 
-pred = torch.tensor([[0, 1, 2, 1, 2, 2],
-                     [2, 1, 2, 0, 1, 2]])
-pred_np = pred.clone()
-logits = torch.tensor(np.arange(36).reshape([2,6,3]))
-
-print(pred)
-print(logits)
-
-batch_size = pred.size(0)
-seq_len = pred.size(1)
+# pred = torch.tensor([[0, 1, 2, 1, 2, 2],
+#                      [2, 1, 2, 0, 1, 2]])
+# pred_np = pred.clone()
+# logits = torch.tensor(np.arange(36).reshape([2,6,3]))
+#
+# print(pred)
+# print(logits)
+#
+# batch_size = pred.size(0)
+# seq_len = pred.size(1)
 
 # for i in range(batch_size):
 #     start_index = -1
@@ -87,4 +87,4 @@ seq_len = pred.size(1)
 
 
 print(torch.__version__)
-
+print(torch.cuda.is_available())

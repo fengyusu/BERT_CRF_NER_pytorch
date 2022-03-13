@@ -214,7 +214,8 @@ def build_model_and_tokenizer(args, num_labels):
     bert_config = BertConfig.from_pretrained(args.model_name_or_path)
     model = BERT_CRF.from_pretrained(args.model_name_or_path,
                                      config=bert_config,
-                                     num_labels=num_labels)
+                                     num_labels=num_labels,
+                                     device=args.device)
     model.to(args.device)
 
     return tokenizer, model
