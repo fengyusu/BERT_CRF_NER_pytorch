@@ -45,26 +45,34 @@ def display(train_loss, evaluate_scores):
     train_loss_trace = go.Scatter(
         x = np.arange(len(train_loss)),
         y = np.array(train_loss)[:,0],
-        mode = 'lines + markers',
-        name = 'train_loss'
+        mode='lines + markers + text',
+        name='train_loss',
+        text=np.array(train_loss)[:,0],
+        textposition="top center"
     )
     train_loss_trace1 = go.Scatter(
         x=np.arange(len(train_loss)),
         y=np.array(train_loss)[:, 1],
-        mode='lines + markers',
-        name='tokenize_loss'
+        mode='lines + markers + text',
+        name='tokenize_loss',
+        text=np.array(train_loss)[:,1],
+        textposition="top center"
     )
     train_loss_trace2 = go.Scatter(
         x=np.arange(len(train_loss)),
         y=np.array(train_loss)[:, 2],
-        mode='lines + markers',
-        name='entity_loss'
+        mode='lines + markers + text',
+        name='entity_loss',
+        text=np.array(train_loss)[:,2],
+        textposition="top center"
     )
     evaluate_loss_trace = go.Scatter(
         x = np.arange(len(evaluate_scores)),
         y = np.array(evaluate_scores)[:,-1],
-        mode = 'lines + markers',
-        name = 'evaluate_loss'
+        mode = 'lines + markers + text',
+        name = 'evaluate_loss',
+        text=np.array(evaluate_scores)[:,-1],
+        textposition="top center"
     )
 
     loss_data = [train_loss_trace, train_loss_trace1, train_loss_trace2, evaluate_loss_trace]
@@ -75,20 +83,26 @@ def display(train_loss, evaluate_scores):
     evaluate_f1_trace = go.Scatter(
         x=np.arange(len(evaluate_scores)),
         y=np.array(evaluate_scores)[:, 0],
-        mode='lines + markers',
-        name='f1 score'
+        mode='lines + markers + text',
+        name='f1 score',
+        text=np.array(evaluate_scores)[:, 0],
+        textposition="top center"
     )
     evaluate_precision_trace = go.Scatter(
         x=np.arange(len(evaluate_scores)),
         y=np.array(evaluate_scores)[:, 1],
-        mode='lines + markers',
-        name='precision'
+        mode='lines + markers + text',
+        name='precision',
+        text=np.array(evaluate_scores)[:, 1],
+        textposition="top center"
     )
     evaluate_recall_trace = go.Scatter(
         x=np.arange(len(evaluate_scores)),
         y=np.array(evaluate_scores)[:, 2],
-        mode='lines + markers',
-        name='recall'
+        mode='lines + markers + text',
+        name='recall',
+        text=np.array(evaluate_scores)[:,2],
+        textposition="top center"
     )
     score_data = [evaluate_f1_trace, evaluate_precision_trace, evaluate_recall_trace]
     score_layout = dict(title='score ', xaxis=dict(title='step'), yaxis=dict(title='value'))
@@ -147,6 +161,7 @@ def train(args):
     num_labels = label_vocab.get_item_size()
 
     tokenizer, model = build_model_and_tokenizer(args, num_labels)
+    model.to(args.device)
 
     if not os.path.exists(os.path.join(args.data_cache_path, 'train.pkl')):
         read_data(args, tokenizer, label_vocab)
@@ -298,7 +313,7 @@ def main(ner_type):
 
     parser.add_argument('--num_epochs', type=int, default=15)
     parser.add_argument('--batch_size', type=int, default=8)
-    parser.add_argument('--max_seq_len', type=int, default=91)
+    parser.add_argument('--max_seq_len', type=int, default=100)
 
     parser.add_argument('--learning_rate', type=float, default=5e-5)
     parser.add_argument('--crf_learning_rate', type=float, default=3e-2)
@@ -324,7 +339,7 @@ def main(ner_type):
     parser.add_argument('--logging_steps', type=int, default=50)
 
     parser.add_argument('--seed', type=int, default=2022)
-    parser.add_argument('--device', type=str, default='cpu')
+    parser.add_argument('--device', type=str, default='cuda')
 
     warnings.filterwarnings('ignore')
     args = parser.parse_args()
