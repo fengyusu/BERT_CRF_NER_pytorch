@@ -27,6 +27,7 @@ seed_everything(2022)
 class BERT_CRF(BertPreTrainedModel):
     def __init__(self, config, num_labels, device):
         super(BERT_CRF, self).__init__(config)
+        print("Current model device: ",device)
         self.cur_device = device
 
         self.tokenize_labels_num = num_labels[0]
@@ -35,13 +36,14 @@ class BERT_CRF(BertPreTrainedModel):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.entity_classifier = nn.Linear(config.hidden_size, self.entity_labels_num)
         self.crf_classifier = nn.Linear(config.hidden_size, self.tokenize_labels_num + 2)
-        self.crf = CRF(self.tokenize_labels_num, self.cur_device)
+        self.crf = CRF(tagset_size=self.tokenize_labels_num, device=self.cur_device)
 
-        # self.tokenize_task_weight = nn.Parameter(torch.FloatTensor([1]))
-        # self.entity_task_weight = nn.Parameter(torch.FloatTensor([10]))
+        self.tokenize_task_weight = nn.Parameter(torch.FloatTensor([1]))
+        self.entity_task_weight = nn.Parameter(torch.FloatTensor([100]))
         self.criterion = nn.CrossEntropyLoss()
 
-
+        self.token_segment = True
+        self.debug_print_log = False
 
     def forward(self,
                 input_ids=None,
@@ -51,12 +53,9 @@ class BERT_CRF(BertPreTrainedModel):
                 entity_labels=None,
                 type='Train'):
 
-
-
         # print("input_ids ", input_ids.size())
         # print("token_type_ids ", token_type_ids.size())
         # print("attention_mask ", attention_mask.size())
-
 
         sequence_output, pooled_output = self.bert(
             input_ids=input_ids,
@@ -78,18 +77,20 @@ class BERT_CRF(BertPreTrainedModel):
             tokenize_predict = self.crf.decode(crf_logits, attention_mask)
 
 
-            tokenize_clone = tokenize_labels.clone().detach() if type == 'Train' else tokenize_predict.clone().detach()
-            tokenize_clone = tokenize_clone.contiguous().view(-1)
-            batch_size = entity_logits.size(0)
-            seq_len = entity_logits.size(1)
-            tokenize_clone = (tokenize_clone != 2)
-            tokenize_clone[0] = 0
-            tokenize_clone = torch.cumsum(tokenize_clone,  dim=0)
-            tmp_segment_entity_logits = torch.zeros(tokenize_clone.size(0), self.entity_labels_num).\
-                                         index_add_(0, tokenize_clone.clone(), entity_logits.view(-1, self.entity_labels_num))
-            entity_logits = torch.gather(tmp_segment_entity_logits, 0,
-                                         tokenize_clone.view(batch_size*seq_len, 1).expand(batch_size*seq_len,
-                                         self.entity_labels_num)).view(batch_size, seq_len, -1)
+            if self.token_segment:
+                tokenize_clone = tokenize_labels.clone().detach() if type == 'Train' else tokenize_predict.clone().detach()
+                tokenize_clone = tokenize_clone.contiguous().view(-1)
+                batch_size = entity_logits.size(0)
+                seq_len = entity_logits.size(1)
+                tokenize_clone = (tokenize_clone != 2)
+                tokenize_clone[0] = 0
+                tokenize_clone = torch.cumsum(tokenize_clone, dim=0)
+                tmp_segment_entity_logits = torch.zeros(tokenize_clone.size(0), self.entity_labels_num).to(self.cur_device).\
+                                             index_add_(0, tokenize_clone.clone(), entity_logits.view(-1, self.entity_labels_num))
+                egment_entity_logits = torch.gather(tmp_segment_entity_logits, 0,
+                                             tokenize_clone.view(batch_size*seq_len, 1).expand(batch_size*seq_len,
+                                             self.entity_labels_num)).view(batch_size, seq_len, -1)
+                entity_logits  = entity_logits + egment_entity_logits
 
 
 
@@ -97,7 +98,7 @@ class BERT_CRF(BertPreTrainedModel):
                                          entity_labels.view(-1)) * 100
             _, entity_predict = torch.max(torch.softmax(entity_logits, dim=-1), -1)
 
-            if 1:
+            if self.debug_print_log:
                 print("\n")
                 print("tokenize_loss ", tokenize_loss.item())
                 print("tokenize_labels  ", tokenize_labels[0][0:10])
